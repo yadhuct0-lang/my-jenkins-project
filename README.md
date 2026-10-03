@@ -1,42 +1,45 @@
-# AWS Login Authentication Application
+# Jenkins CI/CD Pipeline for AWS Web Application Deployment
 
-A simple web-based authentication application built using **FastAPI, AWS DynamoDB, Nginx, and Amazon EC2**.
+## Project Overview
 
-The application provides a login page where users enter their credentials. The FastAPI backend validates the credentials against user records stored in DynamoDB and returns the appropriate authentication response.
+This project demonstrates the deployment of a web application using Jenkins for CI/CD automation and AWS infrastructure. The application uses FastAPI for backend authentication, Amazon DynamoDB for user data storage, and Nginx to serve the frontend on an Amazon EC2 instance.
+
+The deployment process uses Bash scripting and SSH/SCP to transfer frontend files to the EC2 server.
+
+## Tech Stack
+
+* **CI/CD:** Jenkins
+* **Version Control:** Git, GitHub
+* **Cloud Platform:** Amazon Web Services (AWS)
+* **Compute:** Amazon EC2
+* **Database:** Amazon DynamoDB
+* **Backend:** Python, FastAPI, Boto3
+* **Web Server:** Nginx
+* **Frontend:** HTML, CSS, JavaScript
+* **Automation:** Bash, SSH, SCP
 
 ## Architecture
 
 ```text
-User
-  │
-  ▼
-Nginx (EC2)
-  │
-  ├── Frontend
-  │     └── Login.html
-  │
-  ▼
-FastAPI Backend
-  │
-  ▼
-Amazon DynamoDB
-  │
-  └── User_Ticket
+Developer
+    |
+    v
+GitHub Repository
+    |
+    v
+Jenkins CI/CD Pipeline
+    |
+    v
+Build / Deployment Script
+    |
+    | SSH / SCP
+    v
+Amazon EC2 Instance
+    |
+    +-- Nginx --> Frontend
+    |
+    +-- FastAPI --> DynamoDB
 ```
-
-## Technologies Used
-
-* Python
-* FastAPI
-* Uvicorn
-* Boto3
-* Amazon DynamoDB
-* Amazon EC2
-* Nginx
-* AWS CodeBuild
-* Bash
-* HTML / CSS / JavaScript
-* Git / GitHub
 
 ## Project Structure
 
@@ -52,216 +55,78 @@ Amazon DynamoDB
     └── Auth_Failure.html
 ```
 
-## Application Flow
+## Application Features
 
-1. The user opens the login page hosted by Nginx on the EC2 instance.
-2. The user enters their username and password.
-3. JavaScript sends the credentials to the FastAPI `/login` endpoint.
-4. FastAPI receives the request and queries the `User_Ticket` DynamoDB table.
-5. The username is used as the DynamoDB key.
-6. The stored password is compared with the submitted password.
-7. If the credentials are valid, the user is redirected to `Dashboard.html`.
-8. If the credentials are invalid, the user is redirected to `Auth_Failure.html`.
+* User login interface built with HTML, CSS, and JavaScript.
+* REST API developed using FastAPI.
+* User record retrieval from Amazon DynamoDB using Boto3.
+* Login success and failure responses.
+* Frontend deployment to an EC2 instance running Nginx.
+* Shell scripting for deployment automation.
 
-## Backend
+## CI/CD Workflow
 
-The backend is implemented using FastAPI.
+1. Application source code is maintained in GitHub.
+2. Jenkins is used to automate the CI/CD workflow.
+3. The deployment script prepares SSH access to the EC2 instance.
+4. SCP transfers frontend files to the Nginx web directory.
+5. Nginx is restarted to apply the deployment.
+6. The deployed frontend communicates with the backend API, which retrieves user records from DynamoDB.
 
-### Login Endpoint
+*The exact pipeline triggers and stages depend on the Jenkins job configuration.*
 
-```text
-POST /login
-```
+## AWS Configuration
 
-### Request
+The application connects to AWS using Boto3 with the following configuration:
 
-```json
-{
-  "username": "example",
-  "password": "password"
-}
-```
+* **AWS Region:** `ap-south-1` (Mumbai)
+* **DynamoDB Table:** `User_Ticket`
+* **DynamoDB Key:** `User_Name`
+* **Deployment Target:** Amazon EC2
+* **Web Server Directory:** `/usr/share/nginx/html/`
 
-### Successful Response
-
-```json
-{
-  "status": "success"
-}
-```
-
-### Failed Response
-
-```json
-{
-  "status": "failure"
-}
-```
-
-## DynamoDB
-
-The application uses an Amazon DynamoDB table named:
-
-```text
-User_Ticket
-```
-
-The table uses:
-
-```text
-User_Name
-```
-
-as the key used to retrieve a user.
-
-The application expects user records to contain a password attribute:
-
-```text
-User_Name
-Password
-```
-
-Example:
-
-```text
-User_Name: testuser
-Password: example-password
-```
-
-## Frontend
-
-The frontend contains three HTML pages:
-
-### Login.html
-
-Provides the login form and sends the credentials to the backend using JavaScript `fetch()`.
-
-### Dashboard.html
-
-Displayed after successful authentication.
-
-### Auth_Failure.html
-
-Displayed when authentication fails.
+AWS permissions must allow the application to access the DynamoDB table.
 
 ## Deployment
 
-The frontend files are deployed to an Amazon EC2 instance running Nginx.
+The deployment script uses SSH and SCP to transfer frontend files to the EC2 instance.
 
-The deployment script:
-
-1. Sets permissions on the SSH private key.
-2. Configures SSH.
-3. Copies the frontend files to the Nginx web directory.
-4. Restarts Nginx.
-
-Example deployment command:
+Example:
 
 ```bash
-scp -i KUBE-INFRA-KP.pem web/* ubuntu@<EC2-IP>:/usr/share/nginx/html/
+scp -i KUBE-INFRA-KP.pem web/* \
+ubuntu@<EC2-IP>:/usr/share/nginx/html/
 ```
 
-Nginx is then restarted:
+Nginx is restarted after deployment:
 
 ```bash
-ssh -i KUBE-INFRA-KP.pem ubuntu@<EC2-IP> 'sudo systemctl restart nginx'
+ssh -i KUBE-INFRA-KP.pem ubuntu@<EC2-IP> \
+'sudo systemctl restart nginx'
 ```
 
-## AWS CodeBuild
-
-The project uses AWS CodeBuild with the following build phases:
-
-### Install
-
-Initializes the build environment.
-
-### Pre-build
-
-Makes the deployment script executable.
-
-```bash
-chmod +x build.sh
-```
-
-### Build
-
-Runs the deployment script.
-
-```bash
-sh -x build.sh
-```
-
-The `buildspec.yml` file controls the CodeBuild process.
-
-## Configuration
-
-The FastAPI application currently uses the AWS Mumbai region:
-
-```text
-ap-south-1
-```
-
-The DynamoDB table is:
-
-```text
-User_Ticket
-```
-
-For production environments, these values should ideally be configured using environment variables instead of being hard-coded.
+Replace `<EC2-IP>` with the appropriate private or public IP address, depending on the network configuration.
 
 ## Security Considerations
 
-This project is intended as a learning/deployment project and should be improved before being used in a production environment.
-
-### Do not commit private keys
-
-The EC2 private key must **never** be committed to GitHub.
-
-Add the key to `.gitignore`:
-
-```text
-*.pem
-```
-
-### Password Security
-
-Passwords should not be stored as plain text in DynamoDB.
-
-A production authentication system should use secure password hashing and a proper authentication mechanism.
-
-### SSH Security
-
-The current deployment configuration disables SSH host-key verification:
-
-```text
-StrictHostKeyChecking no
-UserKnownHostsFile=/dev/null
-```
-
-This is convenient for automation but is not recommended for production environments.
-
-### Credentials
-
-AWS credentials should be provided through IAM roles or secure environment/configuration mechanisms rather than being hard-coded.
+* Never commit `.pem` private keys or AWS credentials to GitHub.
+* Store deployment credentials securely in Jenkins Credentials.
+* Use IAM roles and least-privilege permissions for AWS access.
+* Store passwords using a secure password-hashing algorithm rather than plain text.
+* Configure SSH host-key verification instead of disabling it.
+* Use HTTPS and appropriate network security-group rules.
+* Configure the Nginx reverse proxy correctly to connect the frontend to FastAPI.
 
 ## Future Improvements
 
-Possible improvements include:
-
-* Password hashing
-* HTTPS/SSL configuration
-* JWT or session-based authentication
-* Environment variables for configuration
-* IAM roles instead of SSH keys where possible
-* Secure SSH host-key verification
-* AWS Secrets Manager or Parameter Store
-* Automated CI/CD pipeline
-* Better error handling
-* Input validation using Pydantic models
-* Authentication logging and monitoring
-* Restricting EC2 security-group access
-* Running FastAPI behind Nginx using Uvicorn/Gunicorn
+* Implement automated testing in the Jenkins pipeline.
+* Add build notifications and deployment status reporting.
+* Introduce secure password hashing and session-based authentication.
+* Configure HTTPS using SSL/TLS.
+* Use environment variables for application configuration.
+* Improve monitoring and application logging.
+* Automate infrastructure provisioning using Terraform.
 
 ## Disclaimer
 
-This project is primarily intended for learning and demonstrating a basic AWS-based application deployment workflow using FastAPI, DynamoDB, EC2, Nginx, and CodeBuild.
+This project is intended for learning and demonstrating CI/CD automation, AWS deployment, and web application integration. Additional security controls are required before production use.
